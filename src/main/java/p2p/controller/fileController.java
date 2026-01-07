@@ -127,5 +127,90 @@ public class FileController {
             }
             
 
+        }
     }
+
+
+    public static class Multiparser{
+
+        /* HTTP Request: 브라우저에서 <input type="file">로 hello.txt 업로드
+        POST /upload HTTP/1.1
+        Host: localhost:8080
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryABC123
+
+        ------WebKitFormBoundaryABC123
+        Content-Disposition: form-data; name="file"; filename="hello.txt"
+        Content-Type: text/plain
+
+        Hello World!
+        This is a test file.
+        ------WebKitFormBoundaryABC123--
+
+        */
+        private final byte[] data;
+        private final String boundary;
+
+        public Multiparser(byte[] data, String boundary){
+            this.data= data;
+            this.boundary= boundary;
+        }
+
+
+        public ParseResult parse(){
+            try{
+                // multipart 헤더 파싱을 문자열 기반으로 하기 위함
+                String dataAsString = new String(data);
+
+                // Filename 추출
+                String filenameMarker = "filename=\"";
+                int filenameStart = dataAsString.indexOf(filenameMarker);
+                if(filenameStart ==-1){
+                    return null;
+                }
+                filenameStart +=filenameMarker.length();
+                int filenameEnd = dataAsString.indexOf("\"", filenameStart);
+                String filename = dataAsString.substring(filenameStart, filenameEnd);
+
+
+                // Content-Type 추출
+                String contentTypeMarker = "Content-Type: ";
+                int contentTypeStart = dataAsString.indexOf(contentTypeMarker, filenameEnd);
+                String contentType ="application/octet-stream";
+                if(contentTypeStart != -1){
+                    contentTypeStart += contentTypeMarker.length();
+                    int contentTypeEnd = dataAsString.indexOf("\r\n", contentTypeStart);
+                    contentType = dataAsString.substring(contentTypeStart, contentTypeEnd);
+                }
+
+                // 헤더 끝 찾기
+                String headerEndMarker = "\r\n\r\n";
+                int headerEnd = dataAsString.indexOf(headerEndMarker);
+                if(headerEnd == -1){return null;}
+
+                int contentStart = headerEnd + headerEndMarker.length();
+
+                byte[] boundaryBytes = ("\r\n--"+boundary+"--").getBytes();
+                int contentEnd = findSequence(data, boundaryBytes, contentStart);
+
+                if(contentEnd ==-1){
+                    boundaryBytes = ("\r\n--"+boundary).getBytes();
+                    contentEnd = findSequence(data, boundaryBytes, contentStart);
+                }
+
+                if(contentEnd ==-1 || contentEnd <= contentStart){return null;}
+
+                byte[] fileContent = new byte[contentEnd - contentStart];
+                System.arraycopy(data, contentStart, fileContent, 0, fileContent.length);
+
+                return new ParseResult(filename, contentType, fileContent);
+
+            }
+            catch(Exception e){
+                System.err.println("Error parsing multipart data: "+ e.getMessage());
+                return null;
+            }
+
+        }
+    }
+
 }
