@@ -1,6 +1,13 @@
 package p2p.service;
 
 import java.util.HashMap;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import p2p.utils.UploadUtils;
 
 public class FileSharer {
     private HashMap<Integer, String> availableFiles;
@@ -14,7 +21,7 @@ public class FileSharer {
         while(true){
             port = UploadUtils.generateCode();
             if(!availableFiles.containsKey(port)){
-                avaiableFiles.put(port, filePath);
+                availableFiles.put(port, filePath);
                 return port;
             }
         }
@@ -34,7 +41,7 @@ public class FileSharer {
             new Thread(new FileTransferHandler(clientSocket, filePath)).start();
         }
         catch(IOException err){
-            System.out.println("Error starting file server: " + err.getMessage(),"Port: " + port);
+            System.out.println("Error starting file server: " + err.getMessage() + ", Port: " + port);
         }
     }
 
@@ -54,15 +61,15 @@ public class FileSharer {
             try( FileInputStream fileInputStream = new FileInputStream(filePath) ){
                 OutputStream oos = clientSocket.getOutputStream();
                 String fileName = new File(filePath).getName();
-                String header = "Filename:" + fileName + "\n";
+                String header = "Filename: " + fileName + "\n";
                 oos.write(header.getBytes());
 
                 byte[] buffer = new byte[4096];
                 int byteRead;
-                while(byteRead = fis.read(buffer)!=-1){
+                while((byteRead = fileInputStream.read(buffer)) != -1){
                     oos.write(buffer, 0, byteRead);
                 }
-                system.out.println("File ("+fileName+ ") transferred successfully to: " + clientSocket.getInetAddress());
+                System.out.println("File ("+fileName+ ") transferred successfully to: " + clientSocket.getInetAddress());
             }
             catch(Exception err){
                 System.out.println("Error transferring file: " + err.getMessage());
