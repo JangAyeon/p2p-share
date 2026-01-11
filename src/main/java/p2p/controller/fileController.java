@@ -94,7 +94,7 @@ public class FileController {
                 String boundary = contentType.substring(contentType.indexOf("boundary=")+9);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                IOUtils.copy(exchange.getRequestBody(), baos)
+                IOUtils.copy(exchange.getRequestBody(), baos);
                 byte[] fileBytes = baos.toByteArray();
 
                 MultipartParser parser = new MultipartParser(requestData, boundary);
@@ -102,26 +102,40 @@ public class FileController {
 
                 if(result == null){
                     String response = "Bad Request: Could not parse file content";
-                    exchange.sendResponseHeaders(400, response.getBytes().length)
+                    exchange.sendResponseHeaders(400, response.getBytes().length);
                     try(OuputStream os = exchange.getResponseBody()){
                         os.write(response.getBytes());
                     }
-                    return
+                    return;
                 }
 
                 String response = result.filename;
-                Boolean isUnamed = filename.trim().isEmpty() || filename == null
+                Boolean isUnamed = filename.trim().isEmpty() || filename == null;
                 if(isUnamed){
-                    filename ="unamed-file"
+                    filename ="unamed-file";
+                }
+                String uniqueFilename = UUID.randomUUID().toString()+"_"+new File(filename).getName();
+                String filePath = uploadDir + File.separator + uniqueFilename;
+
+                try(FileOutputStream fos = new FileOutputStream(filePath)){
+                    fos.write(result.fileContent)
                 }
 
+                int port = fileSharer.offerFile(filePath);
+                new Thread(()->fileSharer.startFileServer(port)).start();
+                String jsonResponse = "{\"port\":" + port + "}";
+                headers.add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+                try(OutputStream os = exchange.getResponseBody()){
+                    os.write(jsonResponse.getBytes())
+                }
             }
             catch(Exception e){
                 System.err.println("Error processing upload: "+ e.getMessage());
                 String response = "Server Error: "+e.getMessage();
                 exchange.sendResponseHeaders(500, response.getBytes().length);
                 try(OutputStream os = exchange.getResponseBody()){ // try-with-resources → 자동 close
-                    os.write(response.getBytes())
+                    os.write(response.getBytes());
                 }
 
             }
@@ -211,6 +225,32 @@ public class FileController {
             }
 
         }
+        public static class ParseResult {
+            public final String filename;
+            public final String contentType;
+            public final byte[] fileContent;
+            
+            public ParseResult(String filename, String contentType, byte[] fileContent) {
+                this.filename = filename;
+                this.contentType = contentType;
+                this.fileContent = fileContent;
+            }
+        }
+    
+        private int findSequence(byte[] data, byte[] sequence, int startPos) {
+            outer:
+            for (int i = startPos; i <= data.length - sequence.length; i++) {
+                for (int j = 0; j < sequence.length; j++) {
+                    if (data[i + j] != sequence[j]) {
+                        continue outer;
+                    }
+                }
+                return i;
+            }
+            return -1;
+        }
     }
+
+
 
 }
