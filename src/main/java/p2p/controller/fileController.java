@@ -14,6 +14,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.UUID;
 
+import org.apache.commons.io.IOUtils;
+
 public class FileController {
 
     private final FileSharer fileSharer;
@@ -108,15 +110,10 @@ public class FileController {
                 String boundary = contentType.substring(contentType.indexOf("boundary=")+9);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                InputStream inputStream = exchange.getRequestBody();
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    baos.write(buffer, 0, bytesRead);
-                }
-                byte[] fileBytes = baos.toByteArray();
+                IOUtils.copy(exchange.getRequestBody(), baos);
+                byte[] requestData = baos.toByteArray();
 
-                Multiparser parser = new Multiparser(fileBytes, boundary);
+                Multiparser parser = new Multiparser(requestData, boundary);
                 Multiparser.ParseResult result = parser.parse();
 
                 if(result == null){
