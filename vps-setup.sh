@@ -19,8 +19,8 @@ sudo apt-get install -y openjdk-17-jdk
 
 # install node.js
 echo "Installing Node.js..."
-# node.js 18 설치할 수 있도록 설치 경로랑 목록 정리 -> 다운받은 설치 스크립트를 관리자 권한으로 실행하도록 함
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# node.js 20 LTS 설치할 수 있도록 설치 경로랑 목록 정리 -> 다운받은 설치 스크립트를 관리자 권한으로 실행하도록 함
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 # nodejs 설치 (-y : 다 물어보지 말고 그냥 설치)
 sudo apt install -y nodejs
 
@@ -87,13 +87,13 @@ server {
     location /api/ {
         proxy_pass http://localhost:8080/; 
         proxy_http_version 1.1;
-        # $ 앞에 \ 붙이는 이유:  $로 시작하는 경우, $host를 쉘변수로 착각하기 때문에 쉘 변수로 착각함
+        # $ 앞에 \ 붙이는 이유: $로 시작하는 경우 쉘 변수로 착각하기 때문에 이스케이프 필요
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host; # 요청한 호스트 이름 유지 (원래 요청한 주소 유지)
         proxy_set_header X-Real-IP \$remote_addr; # 원래 클라이언트 IP 유지
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; # 프록시 서버 추가 정보 유지
-        proxy_set_header X-Forwarded-Proto \$scheme; # 이 요청이 원래 `$scheme = http or https` 프로토콜로 왔다는 것을 알려줌
+        proxy_set_header X-Forwarded-Proto \$scheme; # 이 요청이 원래 http 또는 https 프로토콜로 왔다는 것을 알려줌
         proxy_cache_bypass \$http_upgrade; 
     }
 
