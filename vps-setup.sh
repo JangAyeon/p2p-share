@@ -36,10 +36,16 @@ sudo npm install -g pm2
 echo "Installing Maven..."
 sudo apt install -y maven
 
-# clone git repository
-echo "Cloning git repository..."
+# clone or update git repository
+echo "Cloning/updating git repository..."
+if [ -d "p2p-share" ]; then
+    echo "Directory p2p-share already exists. Removing it to get latest version..."
+    rm -rf p2p-share
+fi
 git clone https://github.com/JangAyeon/p2p-share.git
 cd p2p-share
+git checkout main
+git pull origin main
 
 # build backend
 echo "Building backend..."
